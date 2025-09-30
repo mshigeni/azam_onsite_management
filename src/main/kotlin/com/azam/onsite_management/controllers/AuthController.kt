@@ -30,14 +30,14 @@ class AuthController(
                 fullName = request.fullName
             )
             ResponseEntity.ok(mapOf(
-                "error" to "0",
+                "error" to 0,
                 "message" to "User registered successfully", 
                 "userId" to user.id
                 ))
         } catch (ex: IllegalArgumentException) {
             ResponseEntity.badRequest().body(
                 mapOf(
-                    "error" to "1",
+                    "error" to 1,
                     "message" to ex.message
                     ))
         }
@@ -55,15 +55,19 @@ class AuthController(
 
             ResponseEntity.ok(
                 mapOf(
-                    "error" to "0",
+                    "error" to 0,
                     "message" to "Login successful",
-                    "token" to token
+                    "first_name" to "first_name",
+                    "middle_name" to "middle_name",
+                    "last_name" to "last_name",
+                    "roles" to roles,
+                    "token" to token,
                 )
             )
         } catch (ex: AuthenticationException) {
-            ResponseEntity.status(401).body(
+            ResponseEntity.status(200).body(
                 mapOf(
-                    "error" to "1",
+                    "error" to 1,
                     "message" to "Invalid username or password"
                 )
             )

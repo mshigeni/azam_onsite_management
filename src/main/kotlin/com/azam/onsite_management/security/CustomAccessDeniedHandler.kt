@@ -17,7 +17,7 @@ class CustomAccessDeniedHandler : AccessDeniedHandler {
         response.contentType = "application/json"
         response.status = HttpServletResponse.SC_FORBIDDEN
         val body = mapOf(
-            "error" to "1",
+            "error" to 1,
             "message" to "Forbidden: You don’t have permission to access this resource"
         )
         response.writer.write(ObjectMapper().writeValueAsString(body))

@@ -20,7 +20,7 @@ class GlobalExceptionHandler {
         }
         return ResponseEntity(
             mapOf(
-                    "error" to "1",
+                    "error" to 1,
                     "message" to errors), HttpStatus.BAD_REQUEST)
     }
 
@@ -32,7 +32,7 @@ class GlobalExceptionHandler {
         }
         return ResponseEntity(
             mapOf(
-                    "error" to "1",
+                    "error" to 1,
                     "message" to errors), HttpStatus.BAD_REQUEST)
     }
 
@@ -41,7 +41,7 @@ class GlobalExceptionHandler {
     fun handleJsonParseError(ex: HttpMessageNotReadableException): ResponseEntity<Map<String, Any>> {
         return ResponseEntity(
             mapOf(
-                    "error" to "1",
+                    "error" to 1,
                     "message" to listOf("Malformed JSON or missing required fields")),
             HttpStatus.BAD_REQUEST
         )
@@ -52,7 +52,7 @@ class GlobalExceptionHandler {
     fun handleGeneralError(ex: Exception): ResponseEntity<Map<String, Any>> {
         return ResponseEntity(
             mapOf(
-                    "error" to "1",
+                    "error" to 1,
                     "message" to listOf(ex.message ?: "Unexpected error")),
             HttpStatus.INTERNAL_SERVER_ERROR
         )

@@ -17,7 +17,7 @@ class CustomAuthEntryPoint : AuthenticationEntryPoint {
         response.contentType = "application/json"
         response.status = HttpServletResponse.SC_UNAUTHORIZED
         val body = mapOf(
-            "error" to "1",
+            "error" to 1,
             "message" to "Unauthorized: Invalid or missing token"
         )
         response.writer.write(ObjectMapper().writeValueAsString(body))

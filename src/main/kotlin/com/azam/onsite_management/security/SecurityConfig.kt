@@ -27,14 +27,17 @@ class SecurityConfig(
         return config.authenticationManager
     }
 
+    // @Bean
+    // fun authenticationProvider(
+    //     customUserDetailsService: CustomUserDetailsService,
+    //     passwordEncoder: PasswordEncoder
+    // ): AuthenticationProvider {
+    //     return DaoAuthenticationProvider().apply {
+    //         setUserDetailsService(customUserDetailsService as UserDetailsService)
+    //         setPasswordEncoder(passwordEncoder)
+    //     }
+    // }
 
-    @Bean
-    fun authenticationProvider(): AuthenticationProvider {
-        val provider = DaoAuthenticationProvider()
-        provider.setUserDetailsService(customUserDetailsService)
-        provider.setPasswordEncoder(passwordEncoder)
-        return provider
-    }
 
 
     // @Bean
@@ -50,12 +53,14 @@ class SecurityConfig(
         customAccessDeniedHandler: CustomAccessDeniedHandler
     ): SecurityFilterChain {
         http
+            .cors { } // ✅ enable CORS
             .csrf { it.disable() }
             .authorizeHttpRequests { auth ->
                 auth
                     .requestMatchers("/api/auth/login").permitAll()
                     .requestMatchers("/api/auth/register").hasRole("ADMIN")
                     .requestMatchers("/admin/**").hasRole("ADMIN")
+                    .requestMatchers("/ws/**").permitAll()
                     .anyRequest().authenticated()
             }
             .exceptionHandling { exceptions ->
@@ -69,6 +74,19 @@ class SecurityConfig(
             .formLogin { it.disable() }
 
         return http.build()
+    }
+
+    @Bean
+    fun corsConfigurationSource(): org.springframework.web.cors.CorsConfigurationSource {
+        val configuration = org.springframework.web.cors.CorsConfiguration()
+        configuration.allowedOrigins = listOf("http://azam-onsite.local")
+        configuration.allowedMethods = listOf("GET", "POST", "PUT", "DELETE", "OPTIONS")
+        configuration.allowedHeaders = listOf("*")
+        configuration.allowCredentials = true
+
+        val source = org.springframework.web.cors.UrlBasedCorsConfigurationSource()
+        source.registerCorsConfiguration("/**", configuration)
+        return source
     }
 
 
