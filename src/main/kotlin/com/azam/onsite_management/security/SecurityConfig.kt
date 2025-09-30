@@ -60,7 +60,9 @@ class SecurityConfig(
                     .requestMatchers("/api/auth/login").permitAll()
                     .requestMatchers("/api/auth/register").hasRole("ADMIN")
                     .requestMatchers("/admin/**").hasRole("ADMIN")
-                    .requestMatchers("/ws/**").permitAll()
+                    // .requestMatchers("/ws/**").permitAll()
+                    .requestMatchers("/ws/**", "/ws/info/**").permitAll()
+                    .requestMatchers("/api/test/dashboard").permitAll()
                     .anyRequest().authenticated()
             }
             .exceptionHandling { exceptions ->

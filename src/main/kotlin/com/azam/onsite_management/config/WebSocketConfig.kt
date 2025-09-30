@@ -10,7 +10,7 @@ import org.slf4j.LoggerFactory
 @Configuration
 @EnableWebSocketMessageBroker
 class WebSocketConfig : WebSocketMessageBrokerConfigurer {
-    
+
     private val log = LoggerFactory.getLogger(WebSocketConfig::class.java)
 
     override fun configureMessageBroker(config: MessageBrokerRegistry) {
@@ -24,7 +24,7 @@ class WebSocketConfig : WebSocketMessageBrokerConfigurer {
 
     override fun registerStompEndpoints(registry: StompEndpointRegistry) {
         registry.addEndpoint("/ws")
-            .setAllowedOriginPatterns("http://azam-onsite.local") // ✅ allow your frontend domain
+            .setAllowedOriginPatterns("*") // ✅ allow your frontend domain
             .withSockJS()
 
         log.info("✅ WebSocket endpoint registered at /ws")
