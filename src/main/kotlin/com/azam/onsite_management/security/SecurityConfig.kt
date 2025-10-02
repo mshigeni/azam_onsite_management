@@ -59,6 +59,7 @@ class SecurityConfig(
                 auth
                     .requestMatchers("/api/auth/login").permitAll()
                     .requestMatchers("/api/auth/register").hasRole("ADMIN")
+                    .requestMatchers("/api/dashboard/summary").hasRole("ADMIN")
                     .requestMatchers("/admin/**").hasRole("ADMIN")
                     // .requestMatchers("/ws/**").permitAll()
                     .requestMatchers("/ws/**", "/ws/info/**").permitAll()
