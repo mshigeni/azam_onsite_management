@@ -8,12 +8,25 @@ import com.azam.onsite_management.dto.TransactionRequest
 import com.azam.onsite_management.models.UserEntity
 import com.azam.onsite_management.services.UserService
 import com.azam.onsite_management.models.Transaction
+import com.azam.onsite_management.services.TransactionProcessingService
+import jakarta.servlet.http.HttpServletRequest
 
 @RestController
 @RequestMapping("/api/transactions")
 class TransactionController(
-    private val transactionService: TransactionService
+    private val transactionService: TransactionService,
+    private val transactionProcessingService: TransactionProcessingService
 ) {
+
+    @PostMapping("/magogoni")
+    fun processTransactionMagogoni(
+        @Valid @RequestBody request: TransactionRequest,
+        httpRequest: HttpServletRequest
+    ): ResponseEntity<Any> {
+        val clientIp = httpRequest.remoteAddr
+        val result = transactionProcessingService.processMagogoniTransaction(request, clientIp)
+        return ResponseEntity.ok(result)
+    }
 
     @PostMapping("/add")
     fun addTransaction(@Valid @RequestBody request: TransactionRequest): ResponseEntity<Any> {

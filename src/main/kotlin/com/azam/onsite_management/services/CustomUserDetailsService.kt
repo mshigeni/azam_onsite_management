@@ -1,4 +1,5 @@
 package com.azam.onsite_management.services
+
 import com.azam.onsite_management.models.UserEntity
 import org.springframework.security.core.userdetails.UserDetails
 import org.springframework.security.core.userdetails.UserDetailsService

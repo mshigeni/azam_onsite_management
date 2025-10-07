@@ -4,7 +4,7 @@ import jakarta.persistence.*
 import java.time.LocalDateTime
 
 @Entity
-@Table(name = "transactions")
+@Table(name = "process_trx")
 data class Transaction(
 
     @Id
@@ -27,6 +27,9 @@ data class Transaction(
     val comment: String,
 
     @Column(nullable = false)
+    val ip_addr: String,
+
+    @Column(nullable = false)
     val mac_addr: String,
 
     @Column(nullable = false)
@@ -39,7 +42,7 @@ data class Transaction(
     val site: String,   // e.g., "MAGOGONI", "KIGAMBONI"
 
     @Column(nullable = false)
-    val type: String, // Trasanction type eg. "ONLINE" or "1", "OFFLINE" or "0"
+    val status: String, // Trasanction type eg. 0 - Just tapped, 3 - powercut, 4 - timeout, 1 - success, 2 - failed maybe no balance
 
     @Column(name = "created_at", nullable = false)
     val createdAt: LocalDateTime = LocalDateTime.now()

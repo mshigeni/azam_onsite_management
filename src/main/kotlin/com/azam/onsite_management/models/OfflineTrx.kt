@@ -39,7 +39,7 @@ data class Transaction(
     val site: String,   // e.g., "MAGOGONI", "KIGAMBONI"
 
     @Column(nullable = false)
-    val type: String, // Trasanction type eg. "ONLINE" or "1", "OFFLINE" or "0"
+    val status: String, // Trasanction type eg. 0 - Unattended, 1 - success, 2 - Attended but failed
 
     @Column(name = "created_at", nullable = false)
     val createdAt: LocalDateTime = LocalDateTime.now()
