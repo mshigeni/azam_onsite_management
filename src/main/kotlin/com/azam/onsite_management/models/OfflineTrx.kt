@@ -42,13 +42,13 @@ data class Transaction(
     val status: String, // Trasanction type eg. 0 - Unattended, 1 - success, 2 - Attended but failed
 
     @Column(name = "created_at", nullable = false)
-    val createdAt: LocalDateTime = LocalDateTime.now()
+    val createdAt: LocalDateTime = LocalDateTime.now(),
 
     @Column(name = "created_by", nullable = false)
-    val createdBy: String
+    val createdBy: String,
 
     @Column(name = "updated_at", nullable = false)
-    val updatedAt: LocalDateTime = LocalDateTime.now()
+    val updatedAt: LocalDateTime = LocalDateTime.now(),
 
     @Column(name = "updated_by", nullable = false)
     val updatedBy: String

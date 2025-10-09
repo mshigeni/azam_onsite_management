@@ -9,7 +9,7 @@ data class TransactionRequest(
     val Card: String,
 
     @field:NotBlank(message = "MAC is required")
-    val MAC: String
+    val MAC: String,
 
     @field:NotBlank(message = "IP is required")
     val IP: String

@@ -110,10 +110,20 @@ class TransactionProcessingService(
                     // ✅ 3. Launch background transfer
                     backgroundTransferService.transferToTransactions(localReference)
 
+                    return mapOf(
+                        "status" to "success",
+                        "local_reference" to record["local_reference"],
+                        "ncard_response" to response
+                    )
+
                     println("🎉 Transaction approved and queued for transfer: $localReference")
                 }
-                302, 320 -> {
-                    logger.debug("RESPONSE: $message")
+                3 -> {
+                    jdbcTemplate.update(
+                        "DELETE FROM process_trxs WHERE local_reference=?",
+                        localReference
+                    )
+                    
                 }
                 else -> {
                     logger.warn("Unhandled status code: $statusCode - Message: $message")
@@ -130,11 +140,5 @@ class TransactionProcessingService(
             logger.error("Unexpected error: ${ex.message}", ex)
             throw RuntimeException("Unexpected error during transaction processing")
         }
-
-        return mapOf(
-            "status" to "success",
-            "local_reference" to record["local_reference"],
-            "ncard_response" to response
-        )
     }
 }
