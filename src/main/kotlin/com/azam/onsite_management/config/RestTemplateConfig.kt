@@ -1,19 +1,19 @@
 package com.azam.onsite_management.config
 
-import org.springframework.boot.web.client.RestTemplateBuilder
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.web.client.RestTemplate
-import java.time.Duration
+import org.springframework.http.client.SimpleClientHttpRequestFactory
 
 @Configuration
 class RestTemplateConfig {
 
     @Bean
     fun restTemplate(): RestTemplate {
-        return RestTemplateBuilder()
-            .setConnectTimeout(Duration.ofSeconds(7))   // ⏱ connect timeout
-            .setReadTimeout(Duration.ofSeconds(7))      // ⏱ read timeout
-            .build()
+        val factory = SimpleClientHttpRequestFactory().apply {
+            setConnectTimeout(7000) // milliseconds
+            setReadTimeout(7000)
+        }
+        return RestTemplate(factory)
     }
 }

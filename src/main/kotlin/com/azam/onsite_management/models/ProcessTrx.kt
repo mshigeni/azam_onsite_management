@@ -5,7 +5,7 @@ import java.time.LocalDateTime
 
 @Entity
 @Table(name = "process_trx")
-data class Transaction(
+data class ProcessTrx(
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -45,13 +45,13 @@ data class Transaction(
     val status: String, // Trasanction type eg. 0 - Just tapped, 3 - powercut, 4 - timeout, 1 - success, 2 - failed maybe no balance
 
     @Column(name = "created_at", nullable = false)
-    val createdAt: LocalDateTime = LocalDateTime.now()
+    val createdAt: LocalDateTime = LocalDateTime.now(),
 
     @Column(name = "created_by", nullable = false)
-    val createdBy: String
+    val createdBy: String,
 
     @Column(name = "updated_at", nullable = false)
-    val updatedAt: LocalDateTime = LocalDateTime.now()
+    val updatedAt: LocalDateTime = LocalDateTime.now(),
 
     @Column(name = "updated_by", nullable = false)
     val updatedBy: String

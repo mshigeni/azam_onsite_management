@@ -2,68 +2,77 @@ package com.azam.onsite_management.services
 
 import com.azam.onsite_management.dto.TransactionRequest
 import com.azam.onsite_management.utils.ReferenceGenerator
+import com.azam.onsite_management.utils.HexUtil
+import org.slf4j.LoggerFactory
+import org.springframework.http.*
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.stereotype.Service
 import org.springframework.web.client.RestTemplate
-import org.springframework.http.HttpEntity
-import org.springframework.http.HttpHeaders
-import org.springframework.http.MediaType
-import com.azam.onsite_management.utils.HexUtil
+import java.net.SocketTimeoutException
 import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
-import org.slf4j.LoggerFactory
-import org.springframework.web.client.HttpStatusCodeException
-import org.springframework.web.client.RestClientException
 
 @Service
 class TransactionProcessingService(
     private val jdbcTemplate: JdbcTemplate,
-    private val restTemplate: RestTemplate = RestTemplate(),  // for calling N-Card API
-    private val gateController: GateControllerService
+    private val gateController: GateControllerService,
+    private val backgroundTransferService: BackgroundTransferService
 ) {
+    private val logger = LoggerFactory.getLogger(TransactionProcessingService::class.java)
 
     fun processMagogoniTransaction(request: TransactionRequest, clientIp: String): Map<String, Any> {
-        // 1️⃣ Check if card_uid exists
-        val cardUID = HexUtil.convertAndReorderHexadecimal(request.card_uid)
+        val cardUID = HexUtil.convertAndReorderHexadecimal(request.Card.toLong())
+        val restTemplate = RestTemplate().apply {
+            requestFactory = org.springframework.http.client.SimpleClientHttpRequestFactory().apply {
+                setConnectTimeout(7000)
+                setReadTimeout(7000)
+            }
+        }
+
+        // 🔹 1. Check if card exists in process_trx
         val existing = jdbcTemplate.queryForList(
-            "SELECT * FROM process_trxs WHERE card_uid = ? AND status = 2 LIMIT 1",
+            "SELECT * FROM process_trx WHERE card_uid = ? AND `status` = 2 LIMIT 1",
             cardUID
         )
 
         val record = if (existing.isNotEmpty()) {
             existing[0]
         } else {
-            // 2️⃣ Generate new reference and insert
-            val local_reference = ReferenceGenerator.generateReferenceAZAM(clientIp)
+            // 🔹 2. Generate new local_reference and insert
+            val localRef = ReferenceGenerator.generateReferenceAZAM(clientIp)
             val amount = "500"
+
             jdbcTemplate.update(
                 """
-                INSERT INTO process_trxs (card_uid, local_reference, payment_ref, amount, comment, mac_addr, scanned_at, paid_at, site, created_by, updated_by)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO process_trx 
+                (card_uid, local_reference, payment_ref, amount, comment, ip_addr, mac_addr, scanned_at, paid_at, site, status, created_at,  created_by, updated_at, updated_by)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """.trimIndent(),
                 cardUID, 
-                local_reference, 
-                "", // payment_ref
+                localRef,
+                 "",
                 amount, 
-                "Auto-generated",
+                "Successfully Created",
                 request.IP, 
                 request.MAC, 
-                request.scanned_at ?: NOW, 
-                "", // paid_at 
-                "MGGN" // MAGOGONI
+                LocalDateTime.now(), 
+                "",
+                "MGGN",  //Site
+                "0",     //Status
+                LocalDateTime.now(), //Created At
                 "SYS", 
+                LocalDateTime.now(),  //Updated At
                 "SYS"
             )
 
             mapOf(
-                "local_reference" to local_reference, 
-                "amount" to amount, 
-                "card_uid" to cardUID, 
+                "local_reference" to localRef,
+                "amount" to amount,
+                "card_uid" to cardUID,
                 "mac_addr" to request.MAC
-                )
+            )
         }
 
-        // 2️⃣ Prepare payload (like Laravel array)
+        // 🔹 3. Build N-Card payload
         val payload = mapOf(
             "tin" to "300100864",
             "mac_addr" to record["mac_addr"],
@@ -75,70 +84,59 @@ class TransactionProcessingService(
             "imei_no" to record["mac_addr"],
             "owner_code" to "AZM001",
             "amount" to record["amount"],
-            "price_code" to "9E8F",   // Kigamboni
+            "price_code" to "9E8F",
             "event_code" to "E5510",
             "data" to "1234567890",
             "password" to record["mac_addr"]
         )
 
-        try {
+        val url = "http://10.20.56.3:9002/ticket_pug/purchase_ticket"
+        val headers = HttpHeaders().apply { contentType = MediaType.APPLICATION_JSON }
+        val requestEntity = HttpEntity(payload, headers)
 
-            val url = "http://10.20.56.3:9002/ticket_pug/purchase_ticket"
-
-            val headers = HttpHeaders().apply {
-                contentType = MediaType.APPLICATION_JSON
-            }
-            val requestEntity = HttpEntity(payload, headers)
-
-            // 3️⃣ Call N-Card API
+        return try {
             val response = restTemplate.postForObject(url, requestEntity, Map::class.java) as Map<*, *>
-
             val statusCode = (response["status_code"] as? Number)?.toInt() ?: -1
             val message = response["message"]?.toString() ?: "Unknown response"
+            val localRef = record["local_reference"].toString()
 
             when (statusCode) {
                 0 -> {
-                    // ✅ 1. Update process_trxs status
                     jdbcTemplate.update(
-                        "UPDATE process_trxs SET status = 1, updated_at = NOW() WHERE local_reference = ?",
-                        localReference
+                        "UPDATE process_trx SET `status` = 1, updated_at = ? WHERE local_reference = ?",
+                        LocalDateTime.now(),
+                        localRef
                     )
+                    gateController.open(request.IP, 0)
+                    backgroundTransferService.transferToTransactions(localRef)
 
-                    // ✅ 2. Open gate
-                    gateControllerService.open(request.ip, 0)
-
-                    // ✅ 3. Launch background transfer
-                    backgroundTransferService.transferToTransactions(localReference)
-
-                    return mapOf(
-                        "status" to "success",
-                        "local_reference" to record["local_reference"],
-                        "ncard_response" to response
-                    )
-
-                    println("🎉 Transaction approved and queued for transfer: $localReference")
+                    logger.info("✅ Success [$localRef]: N-Card approved transaction.")
+                    mapOf("error" to 0, "message" to "Success", "local_reference" to localRef)
                 }
-                3 -> {
-                    jdbcTemplate.update(
-                        "DELETE FROM process_trxs WHERE local_reference=?",
-                        localReference
-                    )
-                    
+
+                302, 320, 3 -> {
+                    jdbcTemplate.update("DELETE FROM process_trx WHERE local_reference = ?", localRef)
+                    logger.warn("⚠️ Deleted transaction $localRef due to status $statusCode ($message)")
+                    mapOf("error" to 1, "message" to message)
                 }
+
                 else -> {
-                    logger.warn("Unhandled status code: $statusCode - Message: $message")
+                    logger.warn("Unhandled status code $statusCode: $message")
+                    mapOf("error" to 1, "message" to message)
                 }
             }
 
-        } catch (ex: HttpStatusCodeException) {
-            logger.error("API returned HTTP ${ex.statusCode}: ${ex.responseBodyAsString}")
-            throw RuntimeException("N-Card API error: ${ex.statusCode}")
-        } catch (ex: RestClientException) {
-            logger.error("Timeout or connection error: ${ex.message}")
-            throw RuntimeException("N-Card API timeout (exceeded 7 seconds)")
+        } catch (ex: SocketTimeoutException) {
+            val localRef = record["local_reference"].toString()
+            jdbcTemplate.update("UPDATE process_trx SET `status` = 2, updated_at = ? WHERE local_reference = ?", LocalDateTime.now(), localRef)
+            logger.error("⏳ Timeout while processing $localRef: ${ex.message}")
+            mapOf("error" to 1, "message" to "N-Card API timeout: ${ex.message}")
+
         } catch (ex: Exception) {
-            logger.error("Unexpected error: ${ex.message}", ex)
-            throw RuntimeException("Unexpected error during transaction processing")
+            val localRef = record["local_reference"].toString()
+            jdbcTemplate.update("UPDATE process_trx SET `status` = 2, updated_at = ? WHERE local_reference = ?", LocalDateTime.now(), localRef)
+            logger.error("❌ Unexpected error while processing $localRef: ${ex.message}", ex)
+            mapOf("error" to 1, "message" to "Unexpected error: ${ex.message}")
         }
     }
 }

@@ -28,23 +28,23 @@ class TransactionController(
         return ResponseEntity.ok(result)
     }
 
-    @PostMapping("/add")
-    fun addTransaction(@Valid @RequestBody request: TransactionRequest): ResponseEntity<Any> {
-        return try {
-            transactionService.saveTransaction(
-                gate = request.gate,
-                status = request.status
-            )
-            ResponseEntity.ok(mapOf(
-                "error" to 0,
-                "message" to "Transaction added successfully", 
-                ))
-        } catch (ex: IllegalArgumentException) {
-            ResponseEntity.badRequest().body(
-                mapOf(
-                    "error" to 1,
-                    "message" to ex.message
-                    ))
-        }
-    }
+    // @PostMapping("/add")
+    // fun addTransaction(@Valid @RequestBody request: TransactionRequest): ResponseEntity<Any> {
+    //     return try {
+    //         transactionService.saveTransaction(
+    //             gate = request.gate,
+    //             status = request.status
+    //         )
+    //         ResponseEntity.ok(mapOf(
+    //             "error" to 0,
+    //             "message" to "Transaction added successfully", 
+    //             ))
+    //     } catch (ex: IllegalArgumentException) {
+    //         ResponseEntity.badRequest().body(
+    //             mapOf(
+    //                 "error" to 1,
+    //                 "message" to ex.message
+    //                 ))
+    //     }
+    // }
 }

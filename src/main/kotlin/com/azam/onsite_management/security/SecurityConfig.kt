@@ -58,6 +58,7 @@ class SecurityConfig(
             .authorizeHttpRequests { auth ->
                 auth
                     .requestMatchers("/api/auth/login").permitAll()
+                    .requestMatchers("/api/transactions/magogoni").permitAll()
                     .requestMatchers("/api/auth/register").hasRole("ADMIN")
                     .requestMatchers("/api/dashboard/summary").hasRole("ADMIN")
                     .requestMatchers("/admin/**").hasRole("ADMIN")

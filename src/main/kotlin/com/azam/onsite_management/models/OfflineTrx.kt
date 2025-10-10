@@ -5,7 +5,7 @@ import java.time.LocalDateTime
 
 @Entity
 @Table(name = "transactions")
-data class Transaction(
+data class OfflineTrx(
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
