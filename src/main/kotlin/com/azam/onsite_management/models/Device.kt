@@ -4,27 +4,12 @@ import jakarta.persistence.*
 import java.time.LocalDateTime
 
 @Entity
-@Table(name = "offline_trxs")
-data class OfflineTrx(
+@Table(name = "devices")
+data class Device(
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     val id: Long = 0,
-
-    @Column(nullable = false)
-    val card_uid: String,
-
-    @Column(nullable = false)
-    val local_reference: String,
-
-    @Column(nullable = false)
-    val payment_ref: String,
-
-    @Column(nullable = false)
-    val amount: String,
-
-    @Column(nullable = false)
-    val comment: String,
 
     @Column(nullable = false)
     val ip_addr: String,
@@ -33,16 +18,13 @@ data class OfflineTrx(
     val mac_addr: String,
 
     @Column(nullable = false)
-    val scanned_at: String,
+    val status: String, // e.g., "Processing" = 1, "Idle" = 0
 
     @Column(nullable = false)
-    val paid_at: String,
+    val state: String, // e.g., "ONLINE", "OFFLINE"
 
     @Column(nullable = false)
-    val site: String,   // e.g., "MAGOGONI", "KIGAMBONI"
-
-    @Column(nullable = false)
-    val status: String, // Trasanction type eg. 0 - Just tapped, 3 - powercut, 4 - timeout, 1 - success, 2 - failed maybe no balance
+    val site: String,   // e.g., "MAGOGONI", "KIGAMBONI" etc
 
     @Column(name = "created_at", nullable = false)
     val createdAt: LocalDateTime = LocalDateTime.now(),

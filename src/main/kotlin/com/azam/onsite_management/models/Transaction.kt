@@ -27,6 +27,9 @@ data class Transaction(
     val comment: String,
 
     @Column(nullable = false)
+    val ip_addr: String,
+
+    @Column(nullable = false)
     val mac_addr: String,
 
     @Column(nullable = false)

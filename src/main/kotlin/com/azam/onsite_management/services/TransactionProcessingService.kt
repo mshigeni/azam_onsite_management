@@ -20,7 +20,74 @@ class TransactionProcessingService(
     private val logger = LoggerFactory.getLogger(TransactionProcessingService::class.java)
 
     fun processMagogoniTransaction(request: TransactionRequest, clientIp: String): Map<String, Any> {
-        val cardUID = HexUtil.convertAndReorderHexadecimal(request.Card.toLong())
+        
+        val macAddr = request.MAC
+        val sanitizedMac = formatMacAddress(macAddr)
+            // Check device status from DB
+
+        val deviceRows = jdbcTemplate.queryForList(
+            "SELECT state, status FROM devices WHERE mac_addr = ? LIMIT 1",
+            sanitizedMac
+        )
+
+        if (deviceRows.isEmpty()) {
+            logger.error("❌ Device with MAC $macAddr not found in database")
+            return mapOf("error" to 1, "message" to "Device not registered!")
+        }
+
+        val device = deviceRows[0]
+
+        val state = when (val s = device["state"]) {
+            is Number -> s.toInt()
+            is String -> s.toIntOrNull() ?: throw IllegalStateException("Invalid device state format: $s")
+            else -> throw IllegalStateException("Device state missing or invalid type: ${s?.javaClass}")
+        }
+
+        val status = when (val s = device["status"]) {
+            is Number -> s.toInt()
+            is String -> s.toIntOrNull() ?: throw IllegalStateException("Invalid device status format: $s")
+            else -> throw IllegalStateException("Device status missing or invalid type: ${s?.javaClass}")
+        }
+
+        logger.info("✅ Device state: $state, Device status: $status")
+
+        // Device busy, block new requests
+        if (status == 1) {
+            logger.warn("⏳ Gate $macAddr is currently processing another transaction")
+            return mapOf("error" to 1, "message" to "Gate busy, please wait")
+        }
+
+        // Lock the device to prevent concurrent transactions
+        jdbcTemplate.update(
+            "UPDATE devices SET status = 1, updated_at = ? WHERE mac_addr = ?",
+            LocalDateTime.now(),
+            sanitizedMac
+        )
+        logger.info("🔒 Device $macAddr locked for transaction processing")
+
+        try {
+            // 4️⃣ Based on device state, trigger Online or Offline flow
+            return if (state == 1) {
+                logger.info("🌐 Device $macAddr is ONLINE — starting online process")
+                processOnlineTransaction(request, sanitizedMac)
+            } else {
+                logger.info("⚙️ Device $macAddr is OFFLINE — starting offline process")
+                // processOfflineTransaction(request, clientIp)
+                mapOf("error" to 1, "message" to "START OFFLINE PROCESS - Not Implemented")
+            }
+
+        } finally {
+            // 5️⃣ Mark device back to idle after completion (success or fail)
+            jdbcTemplate.update(
+                "UPDATE devices SET status = 0, updated_at = ? WHERE mac_addr = ?",
+                LocalDateTime.now(),
+                sanitizedMac
+            )
+        }
+    }
+
+    fun processOnlineTransaction(request: TransactionRequest, sanitizedMac: String): Map<String, Any> {
+
         val restTemplate = RestTemplate().apply {
             requestFactory = org.springframework.http.client.SimpleClientHttpRequestFactory().apply {
                 setConnectTimeout(7000)
@@ -28,6 +95,7 @@ class TransactionProcessingService(
             }
         }
 
+        val cardUID = HexUtil.convertAndReorderHexadecimal(request.Card.toLong())
         // 🔹 1. Check if card exists in process_trx
         val existing = jdbcTemplate.queryForList(
             "SELECT * FROM process_trx WHERE card_uid = ? AND `status` = 2 LIMIT 1",
@@ -38,7 +106,7 @@ class TransactionProcessingService(
             existing[0]
         } else {
             // 🔹 2. Generate new local_reference and insert
-            val localRef = ReferenceGenerator.generateReferenceAZAM(clientIp)
+            val localRef = ReferenceGenerator.generateReferenceAZAM(request.IP)
             val amount = "500"
 
             jdbcTemplate.update(
@@ -53,7 +121,7 @@ class TransactionProcessingService(
                 amount, 
                 "Successfully Created",
                 request.IP, 
-                request.MAC, 
+                sanitizedMac, 
                 LocalDateTime.now(), 
                 "",
                 "MGGN",  //Site
@@ -90,7 +158,8 @@ class TransactionProcessingService(
             "password" to record["mac_addr"]
         )
 
-        val url = "http://10.20.56.3:9002/ticket_pug/purchase_ticket"
+        // val url = "http://10.20.56.3:9002/ticket_pug/purchase_ticket"
+        val url = "http://wanamaji.local/emulate-ncard"
         val headers = HttpHeaders().apply { contentType = MediaType.APPLICATION_JSON }
         val requestEntity = HttpEntity(payload, headers)
 
@@ -99,19 +168,26 @@ class TransactionProcessingService(
             val statusCode = (response["status_code"] as? Number)?.toInt() ?: -1
             val message = response["message"]?.toString() ?: "Unknown response"
             val localRef = record["local_reference"].toString()
+            val paidAt = response["paid_at"].toString()
+            val paymentRef = response["ref"].toString()
 
             when (statusCode) {
                 0 -> {
                     jdbcTemplate.update(
-                        "UPDATE process_trx SET `status` = 1, updated_at = ? WHERE local_reference = ?",
+                        "UPDATE process_trx SET `status` = 1, comment = ?, paid_at = ?, payment_ref = ?, updated_at = ? WHERE local_reference = ?",
+                        message,
+                        paidAt,
+                        paymentRef,
                         LocalDateTime.now(),
                         localRef
                     )
-                    gateController.open(request.IP, 0)
+
+                    // gateController.open(request.IP, 0)
+                    
                     backgroundTransferService.transferToTransactions(localRef)
 
                     logger.info("✅ Success [$localRef]: N-Card approved transaction.")
-                    mapOf("error" to 0, "message" to "Success", "local_reference" to localRef)
+                    mapOf("error" to 0, "message" to message, "local_reference" to localRef)
                 }
 
                 302, 320, 3 -> {
@@ -138,5 +214,9 @@ class TransactionProcessingService(
             logger.error("❌ Unexpected error while processing $localRef: ${ex.message}", ex)
             mapOf("error" to 1, "message" to "Unexpected error: ${ex.message}")
         }
+    }
+
+    fun formatMacAddress(mac: String): String {
+        return mac.chunked(2).joinToString(":").uppercase()
     }
 }
