@@ -23,7 +23,11 @@ class DashboardController(
             "totalTrxs" to summary.totalTrxs,
             "magogoniTrxs" to summary.magogoniTrxs,
             "kigamboniTrxs" to summary.kigamboniTrxs,
-            "offlineTrxs" to summary.offlineTrxs
+            "offlineTrxs" to summary.offlineTrxs,
+            "totalAmount" to summary.totalAmount,
+            "magogoniAmount" to summary.magogoniAmount,
+            "kigamboniAmount" to summary.kigamboniAmount,
+            "offlineAmount" to summary.offlineAmount
         )
     }
 
