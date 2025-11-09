@@ -59,8 +59,11 @@ class SecurityConfig(
                 auth
                     .requestMatchers("/api/auth/login").permitAll()
                     .requestMatchers("/api/transactions/magogoni").permitAll()
+                    .requestMatchers("/api/transactions/kigamboni").permitAll()
                     .requestMatchers("/api/auth/register").hasRole("ADMIN")
                     .requestMatchers("/api/dashboard/summary").hasRole("ADMIN")
+                    .requestMatchers("/api/users/**").hasRole("ADMIN")
+                    .requestMatchers("/api/devices/**").hasRole("ADMIN")
                     .requestMatchers("/admin/**").hasRole("ADMIN")
                     // .requestMatchers("/ws/**").permitAll()
                     .requestMatchers("/ws/**", "/ws/info/**").permitAll()

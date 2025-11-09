@@ -28,6 +28,16 @@ class TransactionController(
         return ResponseEntity.ok(result)
     }
 
+    @PostMapping("/kigamboni")
+    fun processTransactionKigamboni(
+        @Valid @RequestBody request: TransactionRequest,
+        httpRequest: HttpServletRequest
+    ): ResponseEntity<Any> {
+        val clientIp = httpRequest.remoteAddr
+        val result = transactionProcessingService.processKigamboniTransaction(request, clientIp)
+        return ResponseEntity.ok(result)
+    }
+
     // @PostMapping("/add")
     // fun addTransaction(@Valid @RequestBody request: TransactionRequest): ResponseEntity<Any> {
     //     return try {

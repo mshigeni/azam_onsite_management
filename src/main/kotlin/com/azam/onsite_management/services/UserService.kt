@@ -43,4 +43,14 @@ class UserService(
 
     fun findByUsername(username: String): UserEntity? =
         jdbcTemplate.query("SELECT * FROM users WHERE username=?", rowMapper, username).firstOrNull()
+
+
+    fun getAllUsers(): List<UserEntity> {
+        // Example static data – replace with DB repository call
+        return listOf(
+            // UserEntity(1, "Aisha", "Ramadhan", "aisha@azam.co.tz", "0712345678", "Network Engineer"),
+            // UserEntity(2, "Mshigeni", "Mganga", "mshigeni@azam.co.tz", "0765123456", "System Admin"),
+            // UserEntity(3, "Fatma", "Suleiman", "fatma@azam.co.tz", "0759876543", "HR Officer")
+        )
+    }
 }
